@@ -256,6 +256,29 @@ class Vapi {
     return _client!.inputs.microphone.isEnabled == false;
   }
 
+  List<VapiAudioDevice> getAvailableAudioDevices() {
+    Devices availableDevices = _client!.availableDevices;
+    List<VapiAudioDevice?> availableVapiDevices = availableDevices.speaker
+        .map((device) => switch (device.deviceId) {
+              DeviceId.speakerPhone => VapiAudioDevice.speakerphone,
+              DeviceId.bluetooth => VapiAudioDevice.bluetooth,
+              DeviceId.earpiece => VapiAudioDevice.earpiece,
+              DeviceId.wired => VapiAudioDevice.wired,
+              DeviceId() => null,
+            })
+        .where((e) => e != null)
+        .toList();
+
+    List<VapiAudioDevice> nullStrippedAvailableDevices = [];
+    for (VapiAudioDevice? d in availableVapiDevices) {
+      if (d == null) continue;
+
+      nullStrippedAvailableDevices.add(d);
+    }
+
+    return nullStrippedAvailableDevices;
+  }
+
   @Deprecated(
     "Use [setVapiAudioDevice] instead. Deprecated because unusable if user does not depend of daily_flutter",
   )
@@ -265,8 +288,8 @@ class Vapi {
     _client!.setAudioDevice(deviceId: deviceId);
   }
 
-  void setVapiAudioDevice({required VapiAudioDevice device}) {
-    _client!.setAudioDevice(
+  Future<void> setVapiAudioDevice({required VapiAudioDevice device}) async {
+    return await _client!.setAudioDevice(
       deviceId: switch (device) {
         VapiAudioDevice.speakerphone => DeviceId.speakerPhone,
         VapiAudioDevice.wired => DeviceId.wired,
@@ -277,6 +300,8 @@ class Vapi {
   }
 
   void emit(VapiEvent event) {
+    if (_streamController.isClosed) return;
+
     _streamController.add(event);
   }
 
